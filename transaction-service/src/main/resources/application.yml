@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: transaction-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pix_transactions
+    hikari:
+      # pool dimensionado para não sobrecarregar o Postgres sob alta
+      # concorrência (regra prática: 2-4x núcleos de CPU do DB)
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 3000
+  jpa:
+    hibernate:
+      ddl-auto: validate   # migrations via Flyway, nunca auto-DDL em "produção"
+    properties:
+      hibernate:
+        jdbc.batch_size: 20
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      acks: all           # aguarda confirmação de todas as réplicas — durabilidade
+      retries: 3
+      properties:
+        enable.idempotence: true   # evita duplicação de eventos em retry do producer
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      pixTransfer:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 50
+        failure-rate-threshold: 50      # abre o circuito com 50% de falhas
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+
+  ratelimiter:
+    instances:
+      pixTransfer:
+        limit-for-period: 200           # 200 requisições
+        limit-refresh-period: 1s        # por segundo, por instância
+        timeout-duration: 500ms         # espera máx. antes de rejeitar
+
+  retry:
+    instances:
+      pixTransfer:
+        max-attempts: 3
+        wait-duration: 100ms
+        # backoff exponencial evita "martelar" o banco durante contenção real
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.dao.OptimisticLockingFailureException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus, circuitbreakers
+  health:
+    circuitbreakers:
+      enabled: true
