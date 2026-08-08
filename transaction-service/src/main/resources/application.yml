@@ -3,6 +3,8 @@ spring:
     name: transaction-service
   datasource:
     url: jdbc:postgresql://localhost:5432/pix_transactions
+    username: pixuser
+    password: pixpass
     hikari:
       # pool dimensionado para não sobrecarregar o Postgres sob alta
       # concorrência (regra prática: 2-4x núcleos de CPU do DB)
@@ -20,6 +22,8 @@ spring:
     producer:
       acks: all           # aguarda confirmação de todas as réplicas — durabilidade
       retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         enable.idempotence: true   # evita duplicação de eventos em retry do producer
 
@@ -33,6 +37,13 @@ resilience4j:
         wait-duration-in-open-state: 10s
         permitted-number-of-calls-in-half-open-state: 5
         automatic-transition-from-open-to-half-open-enabled: true
+        # Erros de REGRA DE NEGÓCIO (saldo insuficiente, dados inválidos) não
+        # devem contar como falha do circuito — o sistema está saudável,
+        # é o pedido do cliente que é inválido. Só falhas de infraestrutura
+        # (banco fora, timeout, etc.) devem abrir o circuito.
+        ignore-exceptions:
+          - com.pixsim.transaction.domain.InsufficientFundsException
+          - java.lang.IllegalArgumentException
 
   ratelimiter:
     instances:
