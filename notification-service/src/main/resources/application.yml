@@ -1,0 +1,30 @@
+server:
+  port: 8082   # porta diferente do transaction-service (8080) — serviços
+               # independentes, cada um com seu próprio ciclo de vida
+
+spring:
+  application:
+    name: notification-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest   # em caso de restart, não perde eventos
+                                     # publicados enquanto o serviço estava fora
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.pixsim.notification.dto"
+        # Ignora o header de tipo que o JsonSerializer do PRODUTOR embute
+        # (aponta para a classe PixTransaction do transaction-service, que
+        # não existe neste serviço) — força a desserialização usando o
+        # tipo alvo configurado abaixo (PixTransactionEvent), mantendo os
+        # dois serviços desacoplados de suas classes internas.
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.pixsim.notification.dto.PixTransactionEvent
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics
