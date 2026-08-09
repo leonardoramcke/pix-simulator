@@ -55,13 +55,28 @@ resilience4j:
   retry:
     instances:
       pixTransfer:
-        max-attempts: 3
-        wait-duration: 100ms
-        # backoff exponencial evita "martelar" o banco durante contenção real
+        # 3 tentativas eram insuficientes sob alta contenção real (ex: 50
+        # transferências simultâneas na mesma conta "quente", como um PIX
+        # de loja popular) — muitas threads esgotavam as tentativas e
+        # falhavam de vez, mesmo o lock otimista funcionando corretamente.
+        # 10 tentativas com backoff mais suave dão tempo de todas
+        # eventualmente conseguirem seu turno sem martelar o banco.
+        max-attempts: 15
+        wait-duration: 30ms
         enable-exponential-backoff: true
-        exponential-backoff-multiplier: 2
+        exponential-backoff-multiplier: 1.5
+        # IMPORTANTE: sob isolamento REPEATABLE_READ, o PRÓPRIO Postgres
+        # detecta conflitos de escrita concorrente e lança um erro de
+        # serialização (SQLSTATE 40001), que o Spring traduz para
+        # CannotAcquireLockException — uma camada de proteção DIFERENTE
+        # do nosso lock otimista via @Version (que gera
+        # OptimisticLockingFailureException). Sob alta contenção, o
+        # Postgres costuma detectar o conflito primeiro. Por isso
+        # escutamos o tipo-pai ConcurrencyFailureException, que cobre
+        # ambos os casos — só assim o retry realmente reage a qualquer
+        # forma de conflito de concorrência, não só uma das duas.
         retry-exceptions:
-          - org.springframework.dao.OptimisticLockingFailureException
+          - org.springframework.dao.ConcurrencyFailureException
 
 management:
   endpoints:
