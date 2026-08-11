@@ -1,0 +1,29 @@
+server:
+  port: 8081   # transaction-service usa 8080, notification-service usa
+               # 8082 — cada microsserviço com sua própria porta
+
+spring:
+  application:
+    name: account-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pix_transactions
+    username: pixuser
+    password: pixpass
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+  jpa:
+    hibernate:
+      # 'validate', não 'update' nem 'create' — a tabela 'accounts' já foi
+      # criada pelas migrations Flyway do transaction-service. Este
+      # serviço só valida que seu mapeamento @Entity bate com o schema
+      # existente, nunca tenta alterá-lo (evita dois serviços brigando
+      # pela dona do schema).
+      ddl-auto: validate
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
