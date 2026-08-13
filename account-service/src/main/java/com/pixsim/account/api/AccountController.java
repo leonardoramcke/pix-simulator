@@ -45,4 +45,12 @@ public class AccountController {
         Account account = accountService.getAccount(id);
         return ResponseEntity.ok(AccountResponse.from(account));
     }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<AccountResponse>> list() {
+        var accounts = accountService.listAccounts().stream()
+                .map(AccountResponse::from)
+                .toList();
+        return ResponseEntity.ok(accounts);
+    }
 }

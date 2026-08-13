@@ -33,4 +33,9 @@ public class AccountService {
         return accountRepository.findById(id)
                 .orElseThrow(() -> new AccountNotFoundException(id));
     }
+
+    @Transactional(readOnly = true)
+    public java.util.List<Account> listAccounts() {
+        return accountRepository.findAll();
+    }
 }
