@@ -53,4 +53,10 @@ public class AccountController {
                 .toList();
         return ResponseEntity.ok(accounts);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        accountService.deleteAccount(id);
+        return ResponseEntity.noContent().build();
+    }
 }

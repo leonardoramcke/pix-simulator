@@ -23,4 +23,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("DUPLICATE_PIX_KEY", e.getMessage()));
     }
+
+    // Postgres rejeita a exclusão de uma conta que já participou de
+    // transferências (chave estrangeira em pix_transactions) — traduz
+    // isso numa mensagem clara em vez do erro genérico de banco.
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleIntegrityViolation(org.springframework.dao.DataIntegrityViolationException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("ACCOUNT_HAS_TRANSACTIONS",
+                        "Não é possível excluir: esta conta já participou de transferências Pix."));
+    }
 }

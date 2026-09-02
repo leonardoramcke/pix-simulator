@@ -38,4 +38,19 @@ public class AccountService {
     public java.util.List<Account> listAccounts() {
         return accountRepository.findAll();
     }
+
+    @Transactional
+    public void deleteAccount(UUID id) {
+        if (!accountRepository.existsById(id)) {
+            throw new AccountNotFoundException(id);
+        }
+        // Se a conta já participou de alguma transferência, o Postgres
+        // rejeita a exclusão por causa da chave estrangeira em
+        // pix_transactions (source_account_id / target_account_id) —
+        // isso é intencional: preserva o histórico de transações mesmo
+        // que a conta seja "encerrada", como um banco real faria.
+        // A exceção resultante (DataIntegrityViolationException) é
+        // traduzida pelo GlobalExceptionHandler numa resposta amigável.
+        accountRepository.deleteById(id);
+    }
 }

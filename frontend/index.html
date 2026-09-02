@@ -116,6 +116,30 @@
     border-color: var(--teal);
   }
   input[type=number] { font-family: 'IBM Plex Mono', monospace; }
+  input:disabled { opacity: 0.6; font-family: 'IBM Plex Mono', monospace; }
+
+  .key-type-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .key-type-btn {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 4px;
+    color: var(--muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    width: auto;
+    margin: 0;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .key-type-btn:hover { color: var(--paper); }
+  .key-type-btn.active { border-color: var(--teal); color: var(--teal); background: rgba(0,194,168,0.08); }
 
   button {
     width: 100%;
@@ -134,6 +158,12 @@
   button:hover { background: #1adfc4; }
   button:active { transform: scale(0.98); }
   button:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--panel-2);
+    color: var(--paper);
+    border: 1px solid var(--line);
+  }
+  .btn-secondary:hover { background: var(--line); }
 
   .feedback {
     margin-top: 14px;
@@ -146,26 +176,55 @@
   .feedback.ok { display: block; background: rgba(0,194,168,0.1); border: 1px solid var(--teal-dim); color: var(--teal); }
   .feedback.err { display: block; background: rgba(232,87,90,0.1); border: 1px solid var(--coral); color: var(--coral); }
 
-  .accounts-grid {
-    display: grid;
-    gap: 12px;
-  }
+  .accounts-grid { display: grid; gap: 10px; }
   .account-pill {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
     align-items: center;
+    gap: 10px;
     background: var(--panel-2);
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
-  .account-pill .key { font-size: 14px; }
+  .account-pill .key-info { min-width: 0; }
+  .account-pill .key {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+  .type-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
   .account-pill .balance {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 500;
     color: var(--teal);
+    white-space: nowrap;
   }
+  .icon-btn {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    font-size: 14px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .icon-btn:hover { color: var(--paper); border-color: var(--muted); background: var(--panel); }
+  .icon-btn.danger:hover { color: var(--coral); border-color: var(--coral); background: rgba(232,87,90,0.08); }
+  .icon-btn.confirm { color: var(--coral); border-color: var(--coral); background: rgba(232,87,90,0.12); font-size: 10px; width: auto; padding: 0 8px; }
 
   .ledger-card { grid-column: 1 / -1; }
   .ledger { display: flex; flex-direction: column; gap: 8px; }
@@ -181,7 +240,11 @@
     font-family: 'IBM Plex Mono', monospace;
     font-size: 13px;
     animation: settle 0.4s ease;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    border: 1px solid transparent;
   }
+  .ledger-row:hover { border-color: var(--line); }
   @keyframes settle {
     from { opacity: 0; transform: translateY(-6px); }
     to { opacity: 1; transform: translateY(0); }
@@ -208,6 +271,90 @@
     color: var(--muted);
     font-size: 12px;
     font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel-2);
+    border: 1px solid var(--teal-dim);
+    color: var(--teal);
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,10,18,0.75);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px 20px;
+    z-index: 200;
+    overflow-y: auto;
+  }
+  .overlay.show { display: flex; }
+  .receipt {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 380px;
+    padding: 32px 28px;
+    position: relative;
+  }
+  .receipt-check {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(0,194,168,0.12);
+    color: var(--teal);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 16px;
+  }
+  .receipt h3 {
+    text-align: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+  .receipt .receipt-amount {
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 32px;
+    font-weight: 500;
+    color: var(--teal);
+    margin: 4px 0 24px;
+  }
+  .receipt-divider {
+    border: none;
+    border-top: 1px dashed var(--line);
+    margin: 20px 0;
+  }
+  .receipt-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 6px 0;
+  }
+  .receipt-row .rlabel { color: var(--muted); }
+  .receipt-row .rvalue {
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right;
+    max-width: 60%;
+    word-break: break-all;
+  }
+  .receipt-close {
+    margin-top: 24px;
   }
 </style>
 </head>
@@ -241,11 +388,20 @@
       <div class="ledger-empty">Carregando contas…</div>
     </div>
 
-    <label for="newPixKey" style="margin-top:24px;">Nova chave Pix (e-mail, CPF, etc.)</label>
+    <label style="margin-top:24px;">Tipo de chave</label>
+    <div class="key-type-row" id="keyTypeRow">
+      <div class="key-type-btn active" data-type="email">E-mail</div>
+      <div class="key-type-btn" data-type="cpf">CPF</div>
+      <div class="key-type-btn" data-type="celular">Celular</div>
+      <div class="key-type-btn" data-type="aleatoria">Aleatória</div>
+    </div>
+
+    <label for="newPixKey" id="newPixKeyLabel">Chave Pix</label>
     <input type="text" id="newPixKey" placeholder="voce@email.com">
+
     <label for="newBalance">Saldo inicial (R$)</label>
     <input type="number" id="newBalance" min="0" step="0.01" placeholder="0,00">
-    <button id="createAccountBtn" style="background: var(--panel-2); color: var(--paper); border: 1px solid var(--line);">+ Criar conta</button>
+    <button id="createAccountBtn" class="btn-secondary">+ Criar conta</button>
     <div class="feedback" id="createFeedback"></div>
   </div>
 
@@ -262,11 +418,19 @@
   transaction-service :8080 · account-service :8081 — rodando localmente via Docker Compose
 </div>
 
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="receiptOverlay">
+  <div class="receipt" id="receiptCard"></div>
+</div>
+
 <script>
 const TX_API = 'http://localhost:8080/api/v1/pix';
 const ACC_API = 'http://localhost:8081/api/v1/accounts';
 
 let accounts = [];
+let selectedKeyType = 'email';
+let confirmingDeleteId = null;
 
 function formatBRL(value) {
   return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -276,6 +440,62 @@ function shortId(id) {
   return id.slice(0, 8);
 }
 
+function inferKeyType(key) {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key)) return 'ALEATÓRIA';
+  if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(key)) return 'CPF';
+  if (/^\+?\d[\d\s()-]{9,}$/.test(key)) return 'CELULAR';
+  if (key.includes('@')) return 'E-MAIL';
+  return 'CHAVE';
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('Chave copiada!'));
+}
+
+function applyKeyTypeUI(type) {
+  selectedKeyType = type;
+  document.querySelectorAll('.key-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+
+  const input = document.getElementById('newPixKey');
+  const label = document.getElementById('newPixKeyLabel');
+  input.disabled = false;
+  input.value = '';
+
+  if (type === 'email') {
+    label.textContent = 'Chave Pix (e-mail)';
+    input.placeholder = 'voce@email.com';
+  } else if (type === 'cpf') {
+    label.textContent = 'Chave Pix (CPF)';
+    input.placeholder = '000.000.000-00';
+  } else if (type === 'celular') {
+    label.textContent = 'Chave Pix (celular)';
+    input.placeholder = '+55 11 91234-5678';
+  } else if (type === 'aleatoria') {
+    label.textContent = 'Chave Pix (gerada automaticamente)';
+    input.disabled = true;
+    input.placeholder = 'clique em "Criar conta" para gerar';
+  }
+}
+
+document.getElementById('keyTypeRow').addEventListener('click', (e) => {
+  const btn = e.target.closest('.key-type-btn');
+  if (btn) applyKeyTypeUI(btn.dataset.type);
+});
+
+document.getElementById('newPixKey').addEventListener('input', (e) => {
+  if (selectedKeyType !== 'cpf') return;
+  let v = e.target.value.replace(/\D/g, '').slice(0, 11);
+  v = v.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  e.target.value = v;
+});
+
 async function checkHealth() {
   const dot = document.getElementById('statusDot');
   const text = document.getElementById('statusText');
@@ -284,6 +504,7 @@ async function checkHealth() {
     if (res.ok) {
       dot.className = 'dot up';
       text.textContent = 'serviços conectados';
+      loadAccounts();
     } else {
       throw new Error('bad status');
     }
@@ -314,30 +535,76 @@ function renderAccounts() {
     transferBtn.disabled = true;
     return;
   }
-  if (accounts.length === 1) {
-    grid.innerHTML += '';
-  }
-  grid.innerHTML = accounts.map(acc => `
+
+  grid.innerHTML = accounts.map(acc => {
+    const isConfirming = confirmingDeleteId === acc.id;
+    return `
     <div class="account-pill">
-      <span class="key">${acc.pixKey}</span>
+      <div class="key-info">
+        <span class="type-badge">${inferKeyType(acc.pixKey)}</span>
+        <span class="key">${acc.pixKey}</span>
+      </div>
       <span class="balance">${formatBRL(acc.balance)}</span>
+      <button type="button" class="icon-btn" title="Copiar chave" onclick="copyToClipboard('${acc.pixKey}')">&#8862;</button>
+      ${isConfirming
+        ? `<button type="button" class="icon-btn confirm" onclick="deleteAccount('${acc.id}')">Confirmar?</button>`
+        : `<button type="button" class="icon-btn danger" title="Excluir chave" onclick="askDeleteAccount('${acc.id}')">&#10005;</button>`}
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   transferBtn.disabled = accounts.length < 2;
 }
 
+function askDeleteAccount(id) {
+  confirmingDeleteId = id;
+  renderAccounts();
+  setTimeout(() => {
+    if (confirmingDeleteId === id) {
+      confirmingDeleteId = null;
+      renderAccounts();
+    }
+  }, 3000);
+}
+
+async function deleteAccount(id) {
+  confirmingDeleteId = null;
+  try {
+    const res = await fetch(`${ACC_API}/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast('Chave excluída.');
+      await loadAccounts();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      showToast(data.message || 'Não foi possível excluir esta chave.');
+      renderAccounts();
+    }
+  } catch (e) {
+    showToast('Erro de conexão ao excluir.');
+    renderAccounts();
+  }
+}
+
 async function createAccount() {
-  const pixKey = document.getElementById('newPixKey').value.trim();
+  let pixKey = document.getElementById('newPixKey').value.trim();
   const balance = parseFloat(document.getElementById('newBalance').value);
   const feedback = document.getElementById('createFeedback');
   const btn = document.getElementById('createAccountBtn');
 
   feedback.className = 'feedback';
 
+  if (selectedKeyType === 'aleatoria') {
+    pixKey = crypto.randomUUID();
+  }
+
   if (!pixKey) {
     feedback.className = 'feedback err';
     feedback.textContent = 'Informe uma chave Pix.';
+    return;
+  }
+  if (selectedKeyType === 'cpf' && pixKey.replace(/\D/g, '').length !== 11) {
+    feedback.className = 'feedback err';
+    feedback.textContent = 'CPF deve ter 11 dígitos.';
     return;
   }
   if (isNaN(balance) || balance < 0) {
@@ -362,11 +629,11 @@ async function createAccount() {
       feedback.textContent = `Conta criada: ${data.pixKey}`;
       document.getElementById('newPixKey').value = '';
       document.getElementById('newBalance').value = '';
-      await loadAccounts();
     } else {
       feedback.className = 'feedback err';
       feedback.textContent = data.message || 'Não foi possível criar a conta.';
     }
+    await loadAccounts();
   } catch (e) {
     feedback.className = 'feedback err';
     feedback.textContent = 'Erro de conexão com o account-service (porta 8081).';
@@ -379,17 +646,38 @@ async function createAccount() {
 document.getElementById('createAccountBtn').addEventListener('click', createAccount);
 
 function populateSelects() {
+  const sourceEl = document.getElementById('sourceSelect');
+  const targetEl = document.getElementById('targetSelect');
+
+  // Guarda o que o usuário já tinha escolhido ANTES de reconstruir as
+  // opções — sem isso, a atualização automática em segundo plano (a cada
+  // poucos segundos, para manter os saldos em dia) reseta a seleção para
+  // o valor padrão no meio da digitação, atrapalhando quem está montando
+  // uma transferência com calma.
+  const prevSource = sourceEl.value;
+  const prevTarget = targetEl.value;
+
   const options = accounts.map(acc =>
     `<option value="${acc.id}">${acc.pixKey} (${shortId(acc.id)})</option>`
   ).join('');
-  document.getElementById('sourceSelect').innerHTML = options;
-  document.getElementById('targetSelect').innerHTML = options;
-  if (accounts.length > 1) {
-    document.getElementById('targetSelect').selectedIndex = 1;
+  sourceEl.innerHTML = options;
+  targetEl.innerHTML = options;
+
+  const availableIds = accounts.map(a => a.id);
+
+  // Restaura a seleção anterior se a conta escolhida ainda existir;
+  // só cai no padrão (primeira/segunda conta) na primeiríssima carga.
+  if (prevSource && availableIds.includes(prevSource)) {
+    sourceEl.value = prevSource;
+  }
+  if (prevTarget && availableIds.includes(prevTarget)) {
+    targetEl.value = prevTarget;
+  } else if (accounts.length > 1) {
+    targetEl.selectedIndex = 1;
   }
 }
 
-function addLedgerRow(sourceKey, targetKey, amount, status) {
+function addLedgerRow(sourceKey, targetKey, amount, status, receiptData) {
   const ledger = document.getElementById('ledger');
   const empty = ledger.querySelector('.ledger-empty');
   if (empty) empty.remove();
@@ -406,8 +694,38 @@ function addLedgerRow(sourceKey, targetKey, amount, status) {
     <span class="amount">${formatBRL(amount)}</span>
     <span class="pill ${pillClass}">${pillLabel}</span>
   `;
+  if (receiptData) {
+    row.addEventListener('click', () => showReceipt(receiptData));
+  }
   ledger.prepend(row);
 }
+
+function showReceipt({ transactionId, endToEndId, sourceKey, targetKey, amount, time }) {
+  const card = document.getElementById('receiptCard');
+  card.innerHTML = `
+    <div class="receipt-check">&#10003;</div>
+    <h3>Transferência concluída</h3>
+    <div class="receipt-amount">${formatBRL(amount)}</div>
+    <hr class="receipt-divider">
+    <div class="receipt-row"><span class="rlabel">De</span><span class="rvalue">${sourceKey}</span></div>
+    <div class="receipt-row"><span class="rlabel">Para</span><span class="rvalue">${targetKey}</span></div>
+    <div class="receipt-row"><span class="rlabel">Data</span><span class="rvalue">${time}</span></div>
+    <div class="receipt-row"><span class="rlabel">ID da transação</span><span class="rvalue">${transactionId}</span></div>
+    <div class="receipt-row"><span class="rlabel">endToEndId</span><span class="rvalue">${endToEndId}</span></div>
+    <hr class="receipt-divider">
+    <button type="button" class="btn-secondary receipt-close" id="receiptCloseBtn">Fechar</button>
+  `;
+  document.getElementById('receiptOverlay').classList.add('show');
+  document.getElementById('receiptCloseBtn').addEventListener('click', hideReceipt);
+}
+
+function hideReceipt() {
+  document.getElementById('receiptOverlay').classList.remove('show');
+}
+
+document.getElementById('receiptOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'receiptOverlay') hideReceipt();
+});
 
 document.getElementById('transferBtn').addEventListener('click', async () => {
   const sourceId = document.getElementById('sourceSelect').value;
@@ -453,13 +771,22 @@ document.getElementById('transferBtn').addEventListener('click', async () => {
     if (res.ok) {
       feedback.className = 'feedback ok';
       feedback.textContent = `Transferência concluída — id ${shortId(data.transactionId)}`;
-      addLedgerRow(sourceAcc.pixKey, targetAcc.pixKey, amount, 'COMPLETED');
+      const receiptData = {
+        transactionId: data.transactionId,
+        endToEndId,
+        sourceKey: sourceAcc.pixKey,
+        targetKey: targetAcc.pixKey,
+        amount,
+        time: new Date().toLocaleString('pt-BR')
+      };
+      addLedgerRow(sourceAcc.pixKey, targetAcc.pixKey, amount, 'COMPLETED', receiptData);
       document.getElementById('amountInput').value = '';
       await loadAccounts();
+      showReceipt(receiptData);
     } else {
       feedback.className = 'feedback err';
       feedback.textContent = data.message || 'A transferência não pôde ser concluída.';
-      addLedgerRow(sourceAcc.pixKey, targetAcc.pixKey, amount, 'FAILED');
+      addLedgerRow(sourceAcc.pixKey, targetAcc.pixKey, amount, 'FAILED', null);
     }
   } catch (e) {
     feedback.className = 'feedback err';

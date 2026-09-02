@@ -110,6 +110,62 @@ services:
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
 
+  # --- Microsserviços da aplicação ---
+  # Cada um usa build multi-stage (Dockerfile dentro da própria pasta do
+  # serviço), então não é necessário ter Java/Maven instalados na máquina
+  # para rodar o projeto inteiro — só Docker.
+  #
+  # As variáveis SPRING_DATASOURCE_URL e SPRING_KAFKA_BOOTSTRAP_SERVERS
+  # sobrescrevem o application.yml de cada serviço (que aponta para
+  # 'localhost', pensado para quando o serviço roda direto na máquina via
+  # 'mvnw spring-boot:run'). Dentro da rede Docker, os containers se
+  # enxergam pelo NOME do serviço, não por 'localhost' — por isso a
+  # sobrescrita aqui.
+  transaction-service:
+    build: ./transaction-service
+    container_name: pix-transaction-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pix_transactions
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
+  account-service:
+    build: ./account-service
+    container_name: pix-account-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # Precisa que o transaction-service já tenha rodado as migrations
+      # Flyway (dono do schema da tabela 'accounts') antes de subir —
+      # senão a validação do Hibernate ('ddl-auto: validate') falha por
+      # não encontrar a tabela ainda.
+      transaction-service:
+        condition: service_started
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pix_transactions
+
+  notification-service:
+    build: ./notification-service
+    container_name: pix-notification-service
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
 volumes:
   pgdata:
   grafana-data:

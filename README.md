@@ -166,34 +166,52 @@ configuração manual) com:
 ## Como rodar localmente
 
 ### Pré-requisitos
-- Docker Desktop
-- Java 21 (Eclipse Temurin recomendado)
-- Não é necessário instalar Maven — os projetos usam Maven Wrapper (`mvnw`)
+- Docker Desktop (é a única dependência real — os microsserviços rodam
+  em containers, não é necessário ter Java/Maven instalados)
 
-### 1. Subir a infraestrutura
+### Modo rápido — um único comando sobe tudo
 
 ```bash
-docker compose up -d
-docker compose ps   # confirme que todos os containers estão healthy
+docker compose up -d --build
 ```
 
-### 2. Rodar cada microsserviço (em janelas de terminal separadas)
+Isso sobe a infraestrutura (Postgres, Kafka, Redis, Prometheus, Grafana)
+**e** os 3 microsserviços (`transaction-service`, `account-service`,
+`notification-service`), cada um com seu próprio `Dockerfile` multi-stage
+(build com JDK completo, runtime só com JRE — imagem final enxuta).
+
+Na primeira vez, o build das imagens Java leva alguns minutos (baixa
+dependências Maven dentro do container). Builds seguintes são rápidos,
+graças ao cache de camadas do Docker.
 
 ```bash
-# Terminal 1
+docker compose ps   # confirme que todos os containers estão Up/healthy
+```
+
+Depois disso, abra `frontend/index.html` diretamente no navegador — a
+interface web já se conecta em `localhost:8080` e `localhost:8081`
+normalmente, pois as portas dos serviços são publicadas no host mesmo
+rodando dentro do Docker.
+
+### Modo desenvolvimento — rodar um serviço fora do Docker
+
+Útil ao editar código e querer reiniciar só um serviço rapidamente, sem
+rebuildar a imagem inteira. Nesse caso, é necessário ter Java 21
+instalado (Maven não — os projetos usam Maven Wrapper, `mvnw`).
+
+```bash
+# sobe só a infraestrutura, sem os microsserviços
+docker compose up -d postgres redis kafka kafka-ui prometheus grafana
+
+# roda o serviço que você está editando direto na máquina
 cd transaction-service
 ./mvnw spring-boot:run
-
-# Terminal 2
-cd account-service
-./mvnw spring-boot:run
-
-# Terminal 3
-cd notification-service
-./mvnw spring-boot:run
 ```
 
-### 3. Testar uma transferência
+O `application.yml` de cada serviço já aponta para `localhost`, então
+funciona automaticamente nesse modo sem precisar mudar nada.
+
+### Testar uma transferência
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/pix/transfer \
@@ -207,15 +225,18 @@ curl -X POST http://localhost:8080/api/v1/pix/transfer \
 ```
 
 A notificação simulada deve aparecer no log do `notification-service`
-poucos milissegundos depois.
+poucos milissegundos depois (`docker compose logs -f notification-service`).
 
-### 4. Explorar a observabilidade
+### Explorar a observabilidade
 
 - Grafana: `http://localhost:3000` (login `admin`/`admin`) → dashboard "Pix Simulator - Transaction Service"
 - Prometheus: `http://localhost:9090/targets`
 - Kafka UI: `http://localhost:8085`
 
-### 5. Rodar os testes
+### Rodar os testes
+
+Os testes rodam fora do Docker (usam Maven Wrapper diretamente), contra a
+infraestrutura já subida via `docker compose`:
 
 ```bash
 cd transaction-service
@@ -240,6 +261,13 @@ explicitamente é, na minha visão, tão importante quanto o código em si:
   inconsistência entre banco e Kafka se um dos dois falhar isoladamente
   (dual write). A evolução correta é uma tabela `outbox_events` lida por
   um processo CDC (ex: Debezium).
+- **CORS liberado para qualquer origem** (`allowedOriginPatterns("*")`) em
+  `transaction-service` e `account-service`, para o frontend de
+  demonstração acessar a API sem fricção. Em produção, isso deveria ser
+  restrito a domínios específicos conhecidos — wildcard é aceitável aqui
+  porque o ambiente é 100% local, sem exposição à internet e sem
+  autenticação baseada em cookie/sessão que pudesse ser explorada por essa
+  configuração permissiva.
 - **Sem API Gateway**: cada serviço é acessado diretamente por porta.
   Um ambiente de produção teria um gateway único como ponto de entrada,
   cuidando de autenticação, roteamento e rate limiting centralizados.
