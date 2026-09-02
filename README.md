@@ -54,8 +54,9 @@ observabilidade e arquitetura de microsserviços**.
 | Serviço | Porta | Responsabilidade |
 |---|---|---|
 | **transaction-service** | 8080 | Orquestra transferências Pix: débito/crédito atômico, idempotência, controle de concorrência, publicação de eventos |
-| **account-service** | 8081 | Criação e consulta de contas via API REST |
+| **account-service** | 8081 | Criação, consulta e exclusão de contas via API REST |
 | **notification-service** | 8082 | Consome eventos Kafka e simula envio de notificação (push/SMS/e-mail) ao usuário |
+| **frontend** | — | Interface web estática (sem build) para demonstração visual do fluxo completo |
 
 ### Infraestrutura (Docker Compose)
 
@@ -135,6 +136,28 @@ configuração manual) com:
 - Estado do circuit breaker em tempo real
 - Pool de conexões do banco (HikariCP)
 - Volume de retries por resultado (sucesso/falha, com/sem retry)
+
+## Frontend web
+
+Interface web (`frontend/index.html` — HTML/CSS/JS puro, sem build,
+sem npm) para demonstrar visualmente o fluxo completo, além de servir
+como cliente de teste manual mais rápido que `curl`:
+
+- **Tipos de chave Pix reais**: E-mail, CPF (com máscara automática),
+  Celular e Aleatória (gera um UUID de verdade, no mesmo formato usado
+  pelo backend) — o tipo de cada conta é inferido visualmente pelo
+  formato da chave, como o Pix real classifica chaves cadastradas.
+- **Comprovante de transferência**: modal estilo recibo bancário, com
+  valor em destaque, dados completos da transação e linha tracejada —
+  aparece automaticamente após cada transferência bem-sucedida.
+- **Exclusão de chave Pix**: com confirmação em dois cliques. Se a
+  conta já tiver participado de alguma transferência, a exclusão é
+  recusada (a chave estrangeira do banco protege o histórico), e o
+  erro do Postgres é traduzido numa mensagem amigável em vez de
+  vazar detalhes internos.
+- **Copiar chave com um clique**, feed de atividade da sessão em tempo
+  real, e indicador de saúde dos serviços (`serviços conectados` /
+  `sem conexão`).
 
 ## Testes automatizados
 
@@ -283,3 +306,4 @@ explicitamente é, na minha visão, tão importante quanto o código em si:
 - [ ] Testes de carga automatizados (k6/Gatling)
 - [ ] CI/CD com GitHub Actions (build + testes a cada push)
 - [ ] Extração de `account-service` para schema/banco próprio
+- [ ] Extrato/histórico de transações por conta (endpoint dedicado no `transaction-service`)
